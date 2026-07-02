@@ -23,7 +23,6 @@ day12_pdf_extractor/
 ├── app.py                 # ⭐ single file: extraction logic + Flask server
 ├── templates/
 │   └── index.html         # the UI (flat pastel, strong typography)
-├── make_sample_pdf.py     # generates a 3-page sample PDF for testing
 ├── sample_data/
 │   └── sample_report.pdf
 ├── requirements.txt
@@ -49,10 +48,7 @@ one file, no imports across modules.
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. (Optional) generate a 3-page sample PDF with tables
-python make_sample_pdf.py
-
-# 3. Start the Flask app
+# 2. Start the Flask app
 python app.py
 ```
 
