@@ -52,7 +52,7 @@ Drag a PDF into the browser and get animated stats, per-page tabs, and a one-cli
 <!-- 📸 Add a screenshot: drop a PNG next to this file and rename below -->
 <img src="screenshot.png" alt="PDF Intelligence UI" width="720"/>
 
-<sub><em>Flat pastel UI · strong typography · zero frameworks on the frontend.</em></sub>
+<sub><em>Simple UI · strong typography · zero frameworks on the frontend.</em></sub>
 
 </div>
 
