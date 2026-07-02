@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Intelligence — Text & Table Extractor</title>
+<!-- Strong display face + clean body face -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ design tokens — monochrome & premium ============ */
+  :root {
+    --bg: #F1F4F8;
+    --ink: #0A0A0A;
+    --muted: #737373;
+    --card: #FFFFFF;
+    --border: 2px solid var(--ink);
+    --shadow-subtle: 0 8px 30px rgba(0,0,0,0.04);
+    --shadow-hover: 0 14px 40px rgba(0,0,0,0.08);
+    --radius: 24px;
+    --radius-sm: 12px;
+    --transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    font-size: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Space Grotesk", -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 80px 24px 120px; }
+
+  /* ============ hero ============ */
+  .hero { margin-bottom: 72px; text-align: center; }
+  .badge {
+    display: inline-block; padding: 8px 16px; border-radius: var(--radius-sm);
+    background: var(--ink); color: var(--card);
+    font-size: 0.85rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  h1 {
+    margin: 0 0 24px;
+    font-family: "Archivo Black", "Arial Black", sans-serif; font-weight: 400;
+    font-size: clamp(3rem, 8vw, 6rem);
+    letter-spacing: -0.04em; line-height: 0.95; text-transform: uppercase;
+  }
+  h1 mark {
+    background: transparent; color: var(--muted);
+  }
+  .hero p {
+    color: var(--muted); font-size: 1.25rem; max-width: 600px; margin: 0 auto; line-height: 1.6; font-weight: 400;
+  }
+
+  /* ============ animations ============ */
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(20px); filter: blur(10px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+  @keyframes scale-up {
+    from { opacity: 0; transform: scale(0.95); filter: blur(4px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  @keyframes slide-reveal {
+    from { opacity: 0; transform: translateY(40px) scale(0.98); filter: blur(8px); }
+    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============ drop zone ============ */
+  .dropzone {
+    position: relative; cursor: pointer; text-align: center;
+    background: var(--card); border: 2px dashed var(--ink); border-radius: var(--radius);
+    padding: 80px 24px; transition: all var(--transition);
+    animation: fade-in 1.2s var(--transition) 0.2s both;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--ink);
+    background: #F5F5F5;
+    transform: scale(1.01);
+  }
+  .dropzone .icon {
+    width: 64px; height: 64px; margin: 0 auto 24px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 1.8rem;
+    background: var(--bg); color: var(--ink); border: var(--border);
+  }
+  .dropzone h2 {
+    font-family: "Archivo Black", "Arial Black", sans-serif; font-weight: 400;
+    font-size: 1.6rem; letter-spacing: -0.02em; margin-bottom: 12px;
+  }
+  .dropzone p { color: var(--muted); font-size: 1rem; }
+  .dropzone p b { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+  #fileInput { display: none; }
+
+  /* ============ loader ============ */
+  .loader { display: none; text-align: center; padding: 64px 0; }
+  .loader.active { display: block; animation: scale-up 0.6s var(--transition) both; }
+  .spinner {
+    width: 48px; height: 48px; margin: 0 auto 24px;
+    border: 3px solid rgba(0,0,0,0.1); border-radius: 50%;
+    border-top-color: var(--ink);
+    animation: spin 1s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+  }
+  .loader p { color: var(--ink); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.9rem; }
+
+  /* ============ results ============ */
+  .results { display: none; }
+  .results.active { display: block; animation: slide-reveal 1s var(--transition) both; }
+
+  .filebar {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    flex-wrap: wrap; margin: 64px 0 32px;
+    padding-bottom: 24px; border-bottom: var(--border);
+  }
+  .filebar .name { font-weight: 600; font-size: 1.2rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .filebar .name span.pill {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    background: #F0F0F0; color: var(--ink); padding: 6px 14px; border-radius: var(--radius-sm);
+  }
+  .actions { display: flex; gap: 16px; }
+  .btn {
+    font-family: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    padding: 12px 24px; border-radius: var(--radius-sm); color: var(--ink);
+    background: var(--card); border: var(--border);
+    transition: all var(--transition);
+  }
+  .btn:hover { background: #F5F5F5; transform: translateY(-2px); box-shadow: var(--shadow-subtle); }
+  .btn.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
+  .btn.primary:hover { background: #333; transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 48px; }
+  .stat {
+    background: var(--card); border: var(--border); border-radius: var(--radius-sm);
+    padding: 32px 24px; display: flex; flex-direction: column; justify-content: center;
+    transition: transform var(--transition), box-shadow var(--transition);
+  }
+  .stat:hover { transform: translateY(-4px); box-shadow: var(--shadow-subtle); }
+  .stat .num {
+    font-family: "Archivo Black", "Arial Black", sans-serif; font-weight: 400;
+    font-size: 3rem; letter-spacing: -0.04em; line-height: 1; color: var(--ink);
+  }
+  .stat .lbl {
+    font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-top: 12px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+
+  /* ============ tabs ============ */
+  .tabs { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tab {
+    font-family: inherit; font-size: 0.95rem; font-weight: 500; cursor: pointer;
+    padding: 10px 20px; border-radius: 99px;
+    background: transparent; color: var(--muted); border: 1px solid transparent;
+    transition: all var(--transition);
+  }
+  .tab:hover { color: var(--ink); background: #F0F0F0; }
+  .tab.active { background: var(--ink); color: var(--card); border-color: var(--ink); font-weight: 600; }
+
+  .panel {
+    background: var(--card); border: var(--border); border-radius: var(--radius);
+    padding: 48px; animation: fade-in 0.6s var(--transition) both;
+  }
+  .panel h3 {
+    font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .panel h3::before { content: ""; width: 8px; height: 8px; background: var(--ink); border-radius: 50%; }
+  .panel .text { line-height: 1.8; font-size: 1.05rem; color: var(--ink); white-space: pre-wrap; font-weight: 400; }
+  .panel .empty { color: var(--muted); font-style: italic; }
+
+  table.extracted {
+    width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 0.95rem;
+    border-radius: var(--radius-sm); overflow: hidden;
+    border: var(--border);
+  }
+  table.extracted th {
+    background: #F9F9F9; text-align: left; padding: 16px 20px; font-weight: 600;
+    color: var(--muted); border-bottom: var(--border);
+    text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em;
+  }
+  table.extracted td { padding: 16px 20px; border-bottom: var(--border); color: var(--ink); font-weight: 400; }
+  table.extracted tr:last-child td { border-bottom: none; }
+  table.extracted tr:hover td { background: #FAFAFA; }
+  .tables-block { margin-top: 48px; }
+
+  /* ============ raw json ============ */
+  pre.json {
+    display: none; margin-top: 24px; background: var(--ink); color: #E5E5E5;
+    border-radius: var(--radius-sm); padding: 32px; overflow: auto; max-height: 500px;
+    font: 0.9rem/1.6 "SF Mono", "Fira Code", Consolas, monospace;
+    animation: scale-up 0.4s var(--transition) both;
+  }
+  pre.json.active { display: block; }
+
+  .error {
+    display: none; margin-top: 24px; padding: 20px 24px; border-radius: var(--radius-sm);
+    background: #FFF0F0; color: #D00000; border: 1px solid #FFD6D6; font-weight: 500;
+    animation: fade-in 0.4s var(--transition) both;
+  }
+  .error.active { display: block; }
+
+  footer {
+    margin-top: 96px; padding-top: 32px; border-top: var(--border);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    color: var(--muted); font-size: 0.9rem; font-weight: 500;
+  }
+  footer b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>PDF<br><mark>Intelligence</mark></h1>
+      <p>Drop in any PDF — get clean text, structured tables and rich metadata,
+         ready for your next AI pipeline.</p>
+    </header>
+
+    <!-- upload -->
+    <div class="dropzone" id="dropzone">
+      <div class="icon">📄</div>
+      <h2>Drag &amp; drop your PDF here</h2>
+      <p>or <b>click to browse</b> · max 50 MB · processed locally, nothing leaves your machine</p>
+      <input type="file" id="fileInput" accept="application/pdf">
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <!-- loading -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <p id="loaderText">Scanning pages…</p>
+    </div>
+
+    <!-- results -->
+    <section class="results" id="results">
+      <div class="filebar">
+        <div class="name">📑 <span id="fileName"></span> <span class="pill" id="fileTitle"></span></div>
+        <div class="actions">
+          <button class="btn" id="toggleJson">{ } Raw JSON</button>
+          <button class="btn primary" id="downloadJson">⬇ Download JSON</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="num" id="statPages">0</div><div class="lbl">Pages</div></div>
+        <div class="stat"><div class="num" id="statWords">0</div><div class="lbl">Words</div></div>
+        <div class="stat"><div class="num" id="statTables">0</div><div class="lbl">Tables</div></div>
+        <div class="stat"><div class="num" id="statTime">0s</div><div class="lbl">Processed in</div></div>
+      </div>
+
+      <div class="tabs" id="tabs"></div>
+      <div id="panelHost"></div>
+      <pre class="json" id="jsonView"></pre>
+    </section>
+
+    <footer>
+      <span>Built with <b>pdfplumber</b> + <b>pypdf</b></span>
+      <span>No frameworks · Python stdlib</span>
+    </footer>
+  </div>
+
+<script>
+  const dz = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const loader = document.getElementById('loader');
+  const results = document.getElementById('results');
+  const errorBox = document.getElementById('error');
+  let lastResult = null;
+
+  /* ---------- upload wiring ---------- */
+  dz.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => fileInput.files[0] && handleFile(fileInput.files[0]));
+  ;['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+  ;['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+  dz.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  async function handleFile(file) {
+    errorBox.classList.remove('active');
+    if (!file.name.toLowerCase().endsWith('.pdf')) return showError('Please choose a PDF file.');
+    if (file.size > 50 * 1024 * 1024) return showError('File is larger than 50 MB.');
+
+    results.classList.remove('active');
+    loader.classList.add('active');
+    const t0 = performance.now();
+
+    try {
+      // Send the raw bytes — simplest possible upload, no multipart needed
+      const res = await fetch('/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/pdf', 'X-Filename': encodeURIComponent(file.name) },
+        body: file,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'extraction failed');
+      lastResult = data;
+      render(data, (performance.now() - t0) / 1000, file.name);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      loader.classList.remove('active');
+    }
+  }
+
+  function showError(msg) {
+    errorBox.textContent = '⚠ ' + msg;
+    errorBox.classList.add('active');
+  }
+
+  /* ---------- rendering ---------- */
+  function render(data, seconds, name) {
+    document.getElementById('fileName').textContent = decodeURIComponent(name);
+    document.getElementById('fileTitle').textContent = data.metadata.title || 'no title';
+
+    countUp('statPages', data.summary.total_pages);
+    countUp('statWords', data.summary.total_words);
+    countUp('statTables', data.summary.total_tables);
+    document.getElementById('statTime').textContent = seconds.toFixed(1) + 's';
+
+    // page tabs
+    const tabs = document.getElementById('tabs');
+    tabs.innerHTML = '';
+    data.pages.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.className = 'tab' + (i === 0 ? ' active' : '');
+      b.textContent = 'Page ' + p.page_number + (p.table_count ? ' ▦' : '');
+      b.onclick = () => { selectTab(i); };
+      tabs.appendChild(b);
+    });
+    selectTab(0);
+
+    document.getElementById('jsonView').textContent = JSON.stringify(data, null, 2);
+    document.getElementById('jsonView').classList.remove('active');
+    results.classList.add('active');
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function selectTab(i) {
+    document.querySelectorAll('.tab').forEach((t, j) => t.classList.toggle('active', i === j));
+    const p = lastResult.pages[i];
+    const host = document.getElementById('panelHost');
+
+    let html = '<div class="panel">';
+    html += '<h3>Extracted text · ' + p.word_count + ' words</h3>';
+    html += p.text
+      ? '<div class="text">' + esc(p.text) + '</div>'
+      : '<div class="empty">No text found on this page (may be a scanned image).</div>';
+
+    if (p.tables.length) {
+      html += '<div class="tables-block"><h3>Tables · ' + p.tables.length + ' found</h3>';
+      p.tables.forEach(t => {
+        html += '<table class="extracted"><thead><tr>';
+        (t[0] || []).forEach(c => html += '<th>' + esc(c) + '</th>');
+        html += '</tr></thead><tbody>';
+        t.slice(1).forEach(row => {
+          html += '<tr>' + row.map(c => '<td>' + esc(c) + '</td>').join('') + '</tr>';
+        });
+        html += '</tbody></table>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    host.innerHTML = html;
+  }
+
+  /* animated number counter for the stat cards */
+  function countUp(id, target) {
+    const el = document.getElementById(id);
+    const dur = 1000, t0 = performance.now();
+    (function tick(now) {
+      const k = Math.min((now - t0) / dur, 1);
+      // smooth easing function: 1 - (1 - x)^4
+      const easeOutQuart = 1 - Math.pow(1 - k, 4);
+      el.textContent = Math.round(target * easeOutQuart).toLocaleString();
+      if (k < 1) requestAnimationFrame(tick);
+    })(t0);
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ---------- actions ---------- */
+  document.getElementById('toggleJson').onclick = () =>
+    document.getElementById('jsonView').classList.toggle('active');
+
+  document.getElementById('downloadJson').onclick = () => {
+    if (!lastResult) return;
+    const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: (lastResult.metadata.file_name || 'extracted').replace(/\.pdf$/i, '') + '.json',
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+</script>
+</body>
+</html>
