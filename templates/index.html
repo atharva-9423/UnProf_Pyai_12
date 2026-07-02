@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ============ design tokens — monochrome & premium ============ */
   :root {
     --bg: #F1F4F8;
     --ink: #0A0A0A;
@@ -35,7 +34,6 @@
 
   .wrap { max-width: 1060px; margin: 0 auto; padding: 80px 24px 120px; }
 
-  /* ============ hero ============ */
   .hero { margin-bottom: 72px; text-align: center; }
   .badge {
     display: inline-block; padding: 8px 16px; border-radius: var(--radius-sm);
@@ -56,7 +54,6 @@
     color: var(--muted); font-size: 1.25rem; max-width: 600px; margin: 0 auto; line-height: 1.6; font-weight: 400;
   }
 
-  /* ============ animations ============ */
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(20px); filter: blur(10px); }
     to { opacity: 1; transform: translateY(0); filter: blur(0); }
@@ -71,7 +68,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ============ drop zone ============ */
   .dropzone {
     position: relative; cursor: pointer; text-align: center;
     background: var(--card); border: 2px dashed var(--ink); border-radius: var(--radius);
@@ -96,7 +92,6 @@
   .dropzone p b { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
   #fileInput { display: none; }
 
-  /* ============ loader ============ */
   .loader { display: none; text-align: center; padding: 64px 0; }
   .loader.active { display: block; animation: scale-up 0.6s var(--transition) both; }
   .spinner {
@@ -107,7 +102,6 @@
   }
   .loader p { color: var(--ink); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.9rem; }
 
-  /* ============ results ============ */
   .results { display: none; }
   .results.active { display: block; animation: slide-reveal 1s var(--transition) both; }
 
@@ -148,7 +142,6 @@
     text-transform: uppercase; letter-spacing: 0.1em;
   }
 
-  /* ============ tabs ============ */
   .tabs { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
   .tab {
     font-family: inherit; font-size: 0.95rem; font-weight: 500; cursor: pointer;
@@ -187,7 +180,6 @@
   table.extracted tr:hover td { background: #FAFAFA; }
   .tables-block { margin-top: 48px; }
 
-  /* ============ raw json ============ */
   pre.json {
     display: none; margin-top: 24px; background: var(--ink); color: #E5E5E5;
     border-radius: var(--radius-sm); padding: 32px; overflow: auto; max-height: 500px;
@@ -219,7 +211,6 @@
          ready for your next AI pipeline.</p>
     </header>
 
-    <!-- upload -->
     <div class="dropzone" id="dropzone">
       <div class="icon">📄</div>
       <h2>Drag &amp; drop your PDF here</h2>
@@ -229,13 +220,11 @@
 
     <div class="error" id="error"></div>
 
-    <!-- loading -->
     <div class="loader" id="loader">
       <div class="spinner"></div>
       <p id="loaderText">Scanning pages…</p>
     </div>
 
-    <!-- results -->
     <section class="results" id="results">
       <div class="filebar">
         <div class="name">📑 <span id="fileName"></span> <span class="pill" id="fileTitle"></span></div>
@@ -271,7 +260,6 @@
   const errorBox = document.getElementById('error');
   let lastResult = null;
 
-  /* ---------- upload wiring ---------- */
   dz.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => fileInput.files[0] && handleFile(fileInput.files[0]));
   ;['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
@@ -291,7 +279,6 @@
     const t0 = performance.now();
 
     try {
-      // Send the raw bytes — simplest possible upload, no multipart needed
       const res = await fetch('/api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/pdf', 'X-Filename': encodeURIComponent(file.name) },
@@ -313,7 +300,6 @@
     errorBox.classList.add('active');
   }
 
-  /* ---------- rendering ---------- */
   function render(data, seconds, name) {
     document.getElementById('fileName').textContent = decodeURIComponent(name);
     document.getElementById('fileTitle').textContent = data.metadata.title || 'no title';
@@ -323,7 +309,6 @@
     countUp('statTables', data.summary.total_tables);
     document.getElementById('statTime').textContent = seconds.toFixed(1) + 's';
 
-    // page tabs
     const tabs = document.getElementById('tabs');
     tabs.innerHTML = '';
     data.pages.forEach((p, i) => {
@@ -369,13 +354,11 @@
     host.innerHTML = html;
   }
 
-  /* animated number counter for the stat cards */
   function countUp(id, target) {
     const el = document.getElementById(id);
     const dur = 1000, t0 = performance.now();
     (function tick(now) {
       const k = Math.min((now - t0) / dur, 1);
-      // smooth easing function: 1 - (1 - x)^4
       const easeOutQuart = 1 - Math.pow(1 - k, 4);
       el.textContent = Math.round(target * easeOutQuart).toLocaleString();
       if (k < 1) requestAnimationFrame(tick);
@@ -387,7 +370,6 @@
       ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  /* ---------- actions ---------- */
   document.getElementById('toggleJson').onclick = () =>
     document.getElementById('jsonView').classList.toggle('active');
 
