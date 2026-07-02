@@ -17,7 +17,7 @@
 
 <br/>
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Open_App-6C5CE7?style=for-the-badge)](YOUR_LIVE_DEMO_URL)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Open_App-6C5CE7?style=for-the-badge)](https://pdf-intelligence-gdw3.onrender.com/)
 &nbsp;
 [![Made with Python](https://img.shields.io/badge/Made_with-Python-1A1A1A?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 
